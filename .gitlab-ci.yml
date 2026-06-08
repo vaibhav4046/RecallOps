@@ -1,0 +1,45 @@
+# RecallOps Cortex — GitLab CI/CD (DevSecOps)
+# lint → test (+ SAST + secret detection) → human-gated Cloud Run deploy.
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+stages: [lint, test, deploy]
+
+default:
+  image: python:3.12-slim
+  cache:
+    paths: [.pip/]
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip"
+
+lint:
+  stage: lint
+  allow_failure: true   # advisory
+  script:
+    - pip install ruff
+    - ruff check backend/app
+
+unit-and-smoke:
+  stage: test
+  script:
+    - pip install -r backend/requirements.txt
+    - python backend/scripts/sanity_check.py
+    - python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8099 &
+    - sleep 6
+    - python backend/scripts/smoke_test.py
+
+# Mirrors the product's own ethos: deploy is HUMAN-gated (manual), never automatic.
+deploy-cloud-run:
+  stage: deploy
+  image: google/cloud-sdk:slim
+  script:
+    - echo "$GCP_SA_KEY" | gcloud auth activate-service-account --key-file=-
+    - gcloud config set project "$GCP_PROJECT"
+    - gcloud run deploy recallops-cortex-api --source backend --region us-central1 --allow-unauthenticated --quiet
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+  environment:
+    name: production

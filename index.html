@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecallOps Cortex — Operational Memory for Recall Containment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="theme.css?v=20260608f" />
+  <style>
+    /* ---- responsive ---- */
+    .ro-rail-scrim { display: none; }
+
+    @media (max-width: 1280px) { .ro-topbar-chips, .ro-topbar-div { display: none !important; } }
+    @media (max-width: 720px) { .ro-kbtn { display: none !important; } }
+    @media (max-width: 600px) { .ro-judge-text { display: none !important; } }
+
+    @media (max-width: 1180px) {
+      .ro-rail { width: var(--rail-w-collapsed) !important; }
+      .ro-rail-text, .ro-rail-label, .ro-rail-foot { display: none !important; }
+      .ro-rail nav button { justify-content: center; padding-left: 0 !important; padding-right: 0 !important; }
+    }
+
+    @media (max-width: 1080px) {
+      .ro-hero, .ro-blast, .ro-actions-grid, .ro-report-cols { grid-template-columns: 1fr !important; }
+    }
+
+    @media (max-width: 860px) {
+      .ro-rail {
+        position: fixed !important; left: 0; top: 0; height: 100vh !important;
+        width: var(--rail-w) !important; transform: translateX(-100%);
+        transition: transform .26s cubic-bezier(.22,.61,.36,1); box-shadow: 30px 0 60px -30px rgba(0,0,0,.8);
+      }
+      .ro-rail.ro-rail-open { transform: translateX(0); }
+      .ro-rail-text { display: inline !important; }
+      .ro-rail-label { display: block !important; }
+      .ro-rail-foot { display: block !important; }
+      .ro-rail nav button { justify-content: flex-start; padding-left: 11px !important; padding-right: 11px !important; }
+      .ro-rail-scrim { display: block; }
+      .ro-menu-btn { display: grid !important; }
+    }
+
+    @media (max-width: 560px) {
+      .ro-topbar-recall { display: none !important; }
+    }
+
+    /* splash */
+    #ro-splash { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 200; transition: opacity .4s; }
+    #ro-splash .l { display: flex; align-items: center; gap: 12px; color: var(--t3); font-family: var(--f-mono); font-size: 13px; }
+    #ro-splash .ring { width: 18px; height: 18px; border: 2px solid var(--border-3); border-top-color: var(--cyan); border-radius: 50%; animation: ro-spin .8s linear infinite; }
+  </style>
+</head>
+<body>
+  <div id="ro-splash"><div class="l"><span class="ring"></span> bringing cortex online…</div></div>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- plain JS -->
+  <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
+  <!-- Backend API base. Omit apiBase for localhost (defaults to :8099); set to the
+       Cloud Run service URL when deployed. -->
+  <script>window.RO_CONFIG = { /* apiBase: "https://recallops-cortex-xxxx.run.app" */ };</script>
+  <script src="lib/data.js"></script>
+  <script src="lib/api.js"></script>
+  <script src="bg.js"></script>
+
+  <!-- babel: primitives → store → sections → views -->
+  <script type="text/babel" src="ui.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="store.jsx?v=20260608e"></script>
+  <script type="text/babel" src="sections1.jsx"></script>
+  <script type="text/babel" src="sections2.jsx"></script>
+  <script type="text/babel" src="sections3.jsx"></script>
+  <script type="text/babel" src="views1.jsx"></script>
+  <script type="text/babel" src="views2.jsx"></script>
+  <script type="text/babel" src="views_cortex.jsx"></script>
+  <script type="text/babel" src="graph.jsx"></script>
+  <script type="text/babel" src="views_ops.jsx"></script>
+  <script type="text/babel" src="views_llmops.jsx?v=20260608g"></script>
+
+  <script type="text/babel" data-presets="react">
+    (async function mount() {
+      if (!window.App || !window.ROAPI) return setTimeout(mount, 30);
+      try { await window.ROAPI.hydrate(); } catch (e) { console.warn("hydrate failed, using cached seed", e); }
+      ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(window.App));
+      const sp = document.getElementById("ro-splash");
+      if (sp) { sp.style.opacity = "0"; setTimeout(() => sp.remove(), 450); }
+    })();
+  </script>
+</body>
+</html>
