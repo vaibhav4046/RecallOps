@@ -44,6 +44,23 @@ evidence) → `review` (human approves each, no auto-execution) → `report` (au
 
 ![Data & control flow](screens/01-flow.png)
 
+### Data model (BigQuery / seeded warehouse)
+
+| Table | Key columns |
+|---|---|
+| `recalls_raw` | recall_id · classification · product_description · recalling_firm · reason · distribution_pattern |
+| `inventory_lots` | location_id · sku · lot · units |
+| `pos_sales` | customer_id · sku · lot · units · consented · channel |
+| `shipments` | id · supplier_id · location_id · sku · lot · status · quantity |
+| `store_locations` | id · name · type · city · manager · risk_tier · lot · sku · units |
+| `containment_actions` | action_id · type · priority · owner · scope · evidence_ids · approval_state · status |
+| `audit_events` | event_id · actor_type · actor_name · event_type · label · evidence_ref · timestamp · prev_hash · **hash** |
+| `agent_runs` | run_id · model · prompt_version · tool_count · latency_ms · token_count · eval_score · status |
+
+Blast-radius runs as **real BigQuery jobs** over `inventory_lots / pos_sales / shipments / store_locations`;
+their job IDs are surfaced as proof. The `audit_events` `hash` chains each event to the previous one
+(`hash = sha256(prev_hash + event)`), so any tampering breaks the chain.
+
 ---
 
 ## What's real (verified in-browser)
@@ -143,6 +160,14 @@ cortex/
   .gitlab-ci.yml                        lint → test (+SAST) → human-gated Cloud Run deploy
   docs/                                 architecture · setup runbook · submission pack
 ```
+
+## Screens
+
+| Command center | RecallGraph (3D) |
+|---|---|
+| ![Command center](screens/01-final.png) | ![RecallGraph](screens/graph-sleek.png) |
+| **Agent reasoning + actions** | **Compliance / audit** |
+| ![Agent](screens/01-agent.png) | ![Audit](screens/01-audit-cmd.png) |
 
 ## License
 MIT — see [`LICENSE`](LICENSE).
