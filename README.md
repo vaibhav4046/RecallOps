@@ -8,6 +8,8 @@
 
 **🔗 Live demo:** <https://recall-ops.vercel.app> &nbsp;·&nbsp; **Repo:** <https://github.com/vaibhav4046/RecallOps>
 
+**📘 Project whitepaper:** [`docs/RecallOps-Cortex-Whitepaper.pdf`](docs/RecallOps-Cortex-Whitepaper.pdf) &nbsp;·&nbsp; a full walkthrough of the goals, the use cases stated brutally, the architecture, the data model, the agent design, the audit chain, and operations (LaTeX source: [`docs/RecallOps-Cortex-Whitepaper.tex`](docs/RecallOps-Cortex-Whitepaper.tex)).
+
 > The hosted URL serves the frontend in clearly-labelled **demo / fallback** mode; it flips
 > fully live (real openFDA recall + live Gemini) once the backend API is deployed to Cloud Run
 > and `window.RO_CONFIG.apiBase` in `index.html` points at it.
