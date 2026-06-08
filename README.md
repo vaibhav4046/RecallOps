@@ -6,6 +6,12 @@
 >
 > Google Cloud **Rapid Agent Hackathon** · **Fivetran track** · MIT licensed.
 
+**🔗 Live demo:** <https://recall-ops.vercel.app> &nbsp;·&nbsp; **Repo:** <https://github.com/vaibhav4046/RecallOps>
+
+> The hosted URL serves the frontend in clearly-labelled **demo / fallback** mode; it flips
+> fully live (real openFDA recall + live Gemini) once the backend API is deployed to Cloud Run
+> and `window.RO_CONFIG.apiBase` in `index.html` points at it.
+
 ![RecallOps Cortex command center](screens/01-final-premium.png)
 
 RecallOps Cortex pulls a live openFDA food-enforcement recall, scopes it across
