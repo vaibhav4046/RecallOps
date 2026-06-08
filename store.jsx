@@ -125,13 +125,18 @@ function useContainmentStore() {
     setActionsOn(true); setPhase(p => p === "contained" ? p : "review"); setRunning(false); setBusy(false);
   }, []);
 
+  // Optimistic update for snappy UX, then reconcile with the backend. If the
+  // call fell back (server unreachable/errored), flag the action as NOT recorded
+  // so the UI never claims an unlogged approval was "audit-logged".
   const approveAction = useCallback((id) => {
-    setActionState(prev => ({ ...prev, [id]: { approvalState: "approved", status: "executed", executedAt: new Date().toISOString() } }));
-    if (window.ROAPI) window.ROAPI.approveAction(id).catch(() => {});
+    setActionState(prev => ({ ...prev, [id]: { approvalState: "approved", status: "executed", executedAt: new Date().toISOString(), recorded: true } }));
+    const unrec = () => setActionState(prev => prev[id] ? { ...prev, [id]: { ...prev[id], recorded: false } } : prev);
+    if (window.ROAPI) window.ROAPI.approveAction(id).then(r => { if (r && r._fallback) unrec(); }).catch(unrec);
   }, []);
   const rejectAction = useCallback((id) => {
-    setActionState(prev => ({ ...prev, [id]: { approvalState: "rejected", status: "drafted" } }));
-    if (window.ROAPI) window.ROAPI.rejectAction(id).catch(() => {});
+    setActionState(prev => ({ ...prev, [id]: { approvalState: "rejected", status: "drafted", recorded: true } }));
+    const unrec = () => setActionState(prev => prev[id] ? { ...prev, [id]: { ...prev[id], recorded: false } } : prev);
+    if (window.ROAPI) window.ROAPI.rejectAction(id).then(r => { if (r && r._fallback) unrec(); }).catch(unrec);
   }, []);
 
   useEffect(() => {

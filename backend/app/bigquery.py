@@ -31,7 +31,31 @@ TABLES = {
     "recalls_raw": ("recall_id STRING, classification STRING, product_description STRING, "
                     "recalling_firm STRING, reason STRING, distribution_pattern STRING, "
                     "event_date STRING, source_url STRING"),
+    # Durable copy of the signed audit hash-chain (event_id..hash..sig).
+    "audit_events": ("event_id STRING, recall_id STRING, actor_type STRING, actor_name STRING, "
+                     "event_type STRING, label STRING, evidence_ref STRING, phase STRING, "
+                     "trace_id STRING, timestamp STRING, prev_hash STRING, hash STRING, sig STRING"),
+    # Agent run telemetry surfaced in /llmops.
+    "agent_runs": ("run_id STRING, recall_id STRING, model STRING, prompt_version STRING, "
+                   "tool_count INT64, latency_ms INT64, token_count INT64, cost FLOAT64, "
+                   "eval_score FLOAT64, actions INT64, approvals INT64, status STRING, "
+                   "live BOOL, created_at STRING"),
 }
+
+
+def persist_audit_event(evt: dict) -> None:
+    """Best-effort append of one signed audit event to BigQuery `audit_events`.
+
+    Called from the audit log sink in live mode only; failures are swallowed by
+    the caller so the canonical in-process chain is never blocked.
+    """
+    client = _bq()
+    cols = ("event_id", "recall_id", "actor_type", "actor_name", "event_type", "label",
+            "evidence_ref", "phase", "trace_id", "timestamp", "prev_hash", "hash", "sig")
+    row = {c: evt.get(c, "") for c in cols}
+    errors = client.insert_rows_json(f"{dataset()}.audit_events", [row])
+    if errors:
+        raise RuntimeError(f"audit_events insert failed: {errors}")
 
 
 def ensure_tables() -> None:

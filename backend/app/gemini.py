@@ -103,13 +103,31 @@ def build_actions(recall: dict, stats: dict) -> list[dict]:
     return actions
 
 
-def _fallback_reasoning(recall: dict, stats: dict, note: str) -> list[dict]:
+def _freshness_line(context: dict) -> dict:
+    """Honest freshness line — reflects the REAL sync clock, not a fixed claim."""
+    limit_min = context.get("freshness_limit_min", 15)
+    fresh = context.get("freshness_sec")
+    if fresh is None:
+        return {"t": "Warehouse not yet synced — reasoning on last-known data (freshness unknown)", "tone": "warn"}
+    if fresh <= limit_min * 60:
+        return {"t": f"Confirmed Fivetran freshness {fresh}s — within {limit_min}-min limit", "tone": "ok"}
+    return {"t": f"WARNING: warehouse freshness {fresh}s exceeds {limit_min}-min limit — flagged for review", "tone": "warn"}
+
+
+def _lots_line(recall: dict, stats: dict) -> dict:
+    if stats.get("lotsSynthetic"):
+        return {"t": f"No internal lot match for recalled codes — scoped to demo lots ({stats['skuCount']} SKUs)", "tone": "warn"}
+    return {"t": f"Matched recalled lots to {stats['skuCount']} internal SKUs", "tone": "dim"}
+
+
+def _fallback_reasoning(recall: dict, stats: dict, note: str, context: dict | None = None) -> list[dict]:
+    context = context or {}
     return [
         {"t": f"Parsed openFDA recall {recall.get('recallId','')} — {recall.get('classification','')}", "tone": "cyan"},
         {"t": f"Product: {(recall.get('productDescription') or '')[:70]}", "tone": "dim"},
         {"t": f"Recalling firm {recall.get('recallingFirm','')} — reason: {(recall.get('reason') or '')[:60]}", "tone": "dim"},
-        {"t": "Confirmed Fivetran warehouse freshness within 15-min limit", "tone": "ok"},
-        {"t": f"Matched recalled lots to {stats['skuCount']} internal SKUs", "tone": "dim"},
+        _freshness_line(context),
+        _lots_line(recall, stats),
         {"t": f"Inventory: {stats['unitsInventory']} units across {stats['locationsAffected']} locations", "tone": "warn"},
         {"t": f"POS: {stats['unitsSold']} units sold · {stats['customersToNotify']} consented customers", "tone": "warn"},
         {"t": f"Shipments: {stats['shipmentsInTransit']} in transit ({stats['unitsInTransit']} units)", "tone": "warn"},
@@ -140,7 +158,7 @@ def draft_plan(context: dict) -> dict:
 
     if not s.gemini_ready:
         return {
-            "reasoning": _fallback_reasoning(recall, stats, "gemini-not-configured"),
+            "reasoning": _fallback_reasoning(recall, stats, "gemini-not-configured", context),
             "actions": actions,
             "model": "deterministic-fallback",
             "latency_ms": 0,
@@ -163,7 +181,7 @@ def draft_plan(context: dict) -> dict:
         )
         latency = round((time.perf_counter() - t0) * 1000)
         data = json.loads(resp.text)
-        reasoning = data.get("reasoning") or _fallback_reasoning(recall, stats, "empty")
+        reasoning = data.get("reasoning") or _fallback_reasoning(recall, stats, "empty", context)
         return {
             "reasoning": reasoning,
             "actions": actions,
@@ -174,7 +192,7 @@ def draft_plan(context: dict) -> dict:
         }
     except Exception as e:  # never break the demo on an LLM hiccup
         return {
-            "reasoning": _fallback_reasoning(recall, stats, f"gemini-error: {e}"),
+            "reasoning": _fallback_reasoning(recall, stats, f"gemini-error: {e}", context),
             "actions": actions,
             "model": "deterministic-fallback",
             "latency_ms": 0,

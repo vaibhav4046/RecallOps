@@ -54,7 +54,8 @@ class AppState:
     def __init__(self) -> None:
         self.recall: dict | None = None
         self.warehouse: dict | None = None
-        self.audit = AuditLog()
+        # Audit chain mirrors to BigQuery in live mode (best-effort; never blocks).
+        self.audit = AuditLog(sink=self._persist_audit_event)
         self.actions: list[dict] = []
         self.runs: list[dict] = self._seed_runs()
         self.last_plan: dict | None = None
@@ -186,6 +187,7 @@ class AppState:
             "evidence": br["evidence"],
             "risk_rules": _RISK_RULES,
             "freshness_sec": self._freshness_sec(),
+            "freshness_limit_min": get_settings().freshness_limit_min,
             "human_policy": "no external action without approval",
         }
 
@@ -260,6 +262,14 @@ class AppState:
         ok = sum(1 for a in self.actions if a.get("evidenceIds"))
         return round(ok / len(self.actions), 2)
 
+    # ---- durable audit sink (live mode only; best-effort) ----
+    @staticmethod
+    def _persist_audit_event(evt: dict) -> None:
+        if not get_settings().bigquery_ready:
+            return  # fallback mode — in-process chain is the source of truth
+        from . import bigquery as bq
+        bq.persist_audit_event(evt)
+
     # ---- approval gate (the only path to execution) ----
     def approve_action(self, action_id: str, actor: str = "Operator", trace_id: str = "") -> dict:
         a = self._find_action(action_id)
@@ -275,8 +285,11 @@ class AppState:
 
     def reject_action(self, action_id: str, actor: str = "Operator", trace_id: str = "") -> dict:
         a = self._find_action(action_id)
+        if a["approvalState"] == "rejected":
+            return a  # idempotent — no duplicate audit event
         a["approvalState"] = "rejected"
         a["status"] = "drafted"
+        a["executedAt"] = None  # clear any prior execution timestamp (reject after approve)
         self.audit.append(recall_id=a["recallId"], actor_type="human", actor_name=actor,
                           event_type="ACTION_REJECTED", label=f'Rejected: {a["title"]}',
                           evidence_ref=action_id, phase="approve", trace_id=trace_id)

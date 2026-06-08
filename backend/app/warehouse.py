@@ -72,6 +72,11 @@ def _lots_for(recall: dict | None) -> list[str]:
     return lots
 
 
+def _lots_synthetic(recall: dict | None) -> bool:
+    """True when the recall yielded no usable lot codes, so demo lots were padded in."""
+    return len(list((recall or {}).get("lotCodes") or [])) == 0
+
+
 def build_warehouse(recall: dict | None = None) -> dict:
     """Deterministically build the seeded warehouse, bound to a real recall."""
     rnd = _rng(42)
@@ -132,6 +137,7 @@ def build_warehouse(recall: dict | None = None) -> dict:
     return {
         "skus": skus, "lots": lots, "locations": locations,
         "customers": customers, "shipments": shipments, "suppliers": suppliers,
+        "lotsSynthetic": _lots_synthetic(recall),
     }
 
 
@@ -156,11 +162,13 @@ def blast_radius(wh: dict, recall: dict | None = None) -> dict:
         "supplierHolds": len({s["supplierId"] for s in in_transit}),
         "skuCount": len(wh["skus"]),
         "lotCount": len(wh["lots"]),
+        "lotsSynthetic": bool(wh.get("lotsSynthetic")),
     }
 
+    _lot_note = " · ⚠ no internal lot match (demo lots)" if stats["lotsSynthetic"] else ""
     evidence = {
         "ev_recall": {"id": "ev_recall", "label": "openFDA recall record", "source": "openFDA",
-                      "detail": f'food/enforcement · {(recall or {}).get("recallId", "")}'},
+                      "detail": f'food/enforcement · {(recall or {}).get("recallId", "")}{_lot_note}'},
         "ev_inv": {"id": "ev_inv", "label": "Inventory blast-radius query", "source": "BigQuery",
                    "detail": f'{units_inventory} units · {len(locs)} locations'},
         "ev_sales": {"id": "ev_sales", "label": "POS sales of affected lots", "source": "BigQuery",

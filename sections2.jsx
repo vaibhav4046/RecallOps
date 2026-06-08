@@ -98,6 +98,7 @@ function ActionCard({ action, state, onApprove, onReject, delay = 0 }) {
   const [showEv, setShowEv] = useState(false);
   const executed = state.status === "executed";
   const rejected = state.approvalState === "rejected";
+  const recorded = state.recorded !== false;  // false only when a backend write fell back
   const pt = PRIORITY_TONE[action.priority];
   const evReg = window.RO.evidence;
   return (
@@ -162,8 +163,8 @@ function ActionCard({ action, state, onApprove, onReject, delay = 0 }) {
             <Button variant="ghost" size="sm" onClick={() => onReject(action.id)}>Reject</Button>
           </>
         ) : executed ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: "var(--success)", fontWeight: 600 }}>
-            <Icon name="shieldCheck" size={15} /> Approved · audit-logged (no external dispatch)
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: recorded ? "var(--success)" : "var(--warning)", fontWeight: 600 }}>
+            <Icon name={recorded ? "shieldCheck" : "alert"} size={15} /> {recorded ? "Approved · audit-logged (no external dispatch)" : "Approved locally · ⚠ offline — not recorded server-side"}
           </span>
         ) : (
           <Button variant="ghost" size="sm" icon="refresh" onClick={() => onReject(action.id)}>Re-draft</Button>

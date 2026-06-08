@@ -1234,20 +1234,40 @@ function useContainmentStore() {
       [id]: {
         approvalState: "approved",
         status: "executed",
-        executedAt: new Date().toISOString()
+        executedAt: new Date().toISOString(),
+        recorded: true
       }
     }));
-    if (window.ROAPI) window.ROAPI.approveAction(id).catch(() => {});
+    const unrec = () => setActionState(prev => prev[id] ? {
+      ...prev,
+      [id]: {
+        ...prev[id],
+        recorded: false
+      }
+    } : prev);
+    if (window.ROAPI) window.ROAPI.approveAction(id).then(r => {
+      if (r && r._fallback) unrec();
+    }).catch(unrec);
   }, []);
   const rejectAction = useCallback(id => {
     setActionState(prev => ({
       ...prev,
       [id]: {
         approvalState: "rejected",
-        status: "drafted"
+        status: "drafted",
+        recorded: true
       }
     }));
-    if (window.ROAPI) window.ROAPI.rejectAction(id).catch(() => {});
+    const unrec = () => setActionState(prev => prev[id] ? {
+      ...prev,
+      [id]: {
+        ...prev[id],
+        recorded: false
+      }
+    } : prev);
+    if (window.ROAPI) window.ROAPI.rejectAction(id).then(r => {
+      if (r && r._fallback) unrec();
+    }).catch(unrec);
   }, []);
   useEffect(() => {
     if (!actionsOn || phase === "contained") return;
@@ -3195,6 +3215,7 @@ function ActionCard({
   const [showEv, setShowEv] = useState(false);
   const executed = state.status === "executed";
   const rejected = state.approvalState === "rejected";
+  const recorded = state.recorded !== false;
   const pt = PRIORITY_TONE[action.priority];
   const evReg = window.RO.evidence;
   return React.createElement("div", {
@@ -3381,13 +3402,13 @@ function ActionCard({
       alignItems: "center",
       gap: 7,
       fontSize: 12.5,
-      color: "var(--success)",
+      color: recorded ? "var(--success)" : "var(--warning)",
       fontWeight: 600
     }
   }, React.createElement(Icon, {
-    name: "shieldCheck",
+    name: recorded ? "shieldCheck" : "alert",
     size: 15
-  }), " Approved \xB7 audit-logged (no external dispatch)") : React.createElement(Button, {
+  }), " ", recorded ? "Approved · audit-logged (no external dispatch)" : "Approved locally · ⚠ offline — not recorded server-side") : React.createElement(Button, {
     variant: "ghost",
     size: "sm",
     icon: "refresh",
