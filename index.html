@@ -57,7 +57,7 @@
 
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <!-- JSX is precompiled into app.bundle.js (no in-browser Babel = instant load) -->
 
   <!-- plain JS -->
   <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
@@ -68,21 +68,10 @@
   <script src="lib/api.js"></script>
   <script src="bg.js"></script>
 
-  <!-- babel: primitives → store → sections → views -->
-  <script type="text/babel" src="ui.jsx"></script>
-  <script type="text/babel" src="tweaks-panel.jsx"></script>
-  <script type="text/babel" src="store.jsx?v=20260608e"></script>
-  <script type="text/babel" src="sections1.jsx"></script>
-  <script type="text/babel" src="sections2.jsx"></script>
-  <script type="text/babel" src="sections3.jsx"></script>
-  <script type="text/babel" src="views1.jsx"></script>
-  <script type="text/babel" src="views2.jsx"></script>
-  <script type="text/babel" src="views_cortex.jsx"></script>
-  <script type="text/babel" src="graph.jsx"></script>
-  <script type="text/babel" src="views_ops.jsx"></script>
-  <script type="text/babel" src="views_llmops.jsx?v=20260608g"></script>
+  <!-- Precompiled bundle: ui → store → sections → views (no in-browser Babel) -->
+  <script src="app.bundle.js?v=1"></script>
 
-  <script type="text/babel" data-presets="react">
+  <script>
     (async function mount() {
       if (!window.App || !window.ROAPI) return setTimeout(mount, 30);
       try { await window.ROAPI.hydrate(); } catch (e) { console.warn("hydrate failed, using cached seed", e); }
